@@ -51,7 +51,11 @@ const morkieFaucet = async (address) => {
       return response.data;
     } catch (error) {
       console.error(`❌ Error requesting faucet for ${address}:`, error.response?.data || error.message);
-      return null; // Return null so main() can handle it
+      if(error.response.data) {
+        return error.response.data
+      } else {
+        return null; // Return null so main() can handle it
+      }
     }
 };
 
@@ -67,19 +71,20 @@ const main = async () => {
       for (const address of addresses) {
         console.log(`🚀 Requesting faucet for ${address}...`);
         const result = await morkieFaucet(address);
-  
-        if (!result) {
+        if (!result || result.success == false) {
             console.error(`⚠️ Faucet request failed for ${address}`);
             await notifyToDiscord(
                 process.env.DISCORD_WEBHOOK, 
                 title=`🚨 Faucet request failed`, 
-                description=`requested address : ${address}, please check server log.`
+                description=`requested address : ${address} failed\nstatus - ${result.success}\n${result.message}`,
+                color="13898758"
             );
         } else {
             await notifyToDiscord(
                 process.env.DISCORD_WEBHOOK,
-                title=`Claim result for address`,
-                description=`error ${address} : ${result}`
+                title=`✅ Claim result for address`,
+                description=`requested address : ${address}\nstatus - ${result.success}\n${result.message}`,
+                color="180052"
             )
         }
       }
@@ -89,9 +94,8 @@ const main = async () => {
       console.error("❌ Critical error in main:", error.message);
       await notifyToDiscord(process.env.DISCORD_WEBHOOK, title=`🔥 Critical Error: ${error.message}`);
     }
-};  
+};
 
-main()
 const task = () => {
   console.log(`✅ Running task at ${new Date().toLocaleString()}`);
   main()
